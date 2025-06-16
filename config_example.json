@@ -97,7 +97,7 @@
   },
   "auto_update": {
     "status": true,
-    "git_repo": "berry8838/Sakura_embyboss",
+    "git_repo": "cysnn/embysub",
     "commit_sha": null
   },
   "api": {
@@ -107,5 +107,28 @@
     "allow_origins": [
       "*"
     ]
-  }
+  },
+  "proxy_sub_config": {
+        "status": true,
+        "proxy_sub_db_config": {
+            "db_host": "localhost",
+            "db_user": "root",
+            "db_pwd": "55566677852",
+            "db_name": "xboard",
+            "db_port": 3306,
+            "get_all_sub_sql": "select v2_user.id as id, v2_user.expired_at as expired_at, v2_user.token as token from v2_user;",
+            "get_sub_by_token_sql": "select v2_user.id as id, v2_user.expired_at as expired_at, v2_user.token as token from v2_user where v2_user.token = :token;"
+        },
+        "allow_domains": [
+            "*.example.com",
+            "localhost:7001"
+        ],
+        "token_key": "token",
+        "path_key": "s",
+        "validate_content": false,
+        "expired_at_keyword": "",
+        "limit_keywords": [],
+        "must_keywords": [],
+        "validate_by_clash_user_agent": true
+    }
 }

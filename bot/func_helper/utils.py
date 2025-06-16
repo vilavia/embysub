@@ -3,6 +3,7 @@ import pytz
 from bot import bot, _open, save_config, owner, admins, bot_name, ranks, schedall, group
 from bot.sql_helper.sql_code import sql_add_code
 from bot.sql_helper.sql_emby import sql_get_emby
+from bot.sql_helper.sql_proxy_user import sql_get_proxy_user_by_tg
 from cacheout import Cache
 
 cache = Cache()
@@ -18,6 +19,14 @@ def judge_admins(uid):
         return False
     else:
         return True
+def judge_have_bindsub(tg):
+    """
+    判断是否绑定订阅
+    :param tg: tg_id
+    :return: bool
+    """
+    proxy_user = sql_get_proxy_user_by_tg(tg)
+    return proxy_user and proxy_user.is_bound
 
 
 # @cache.memoize(ttl=60)
@@ -42,9 +51,9 @@ async def members_info(tg=None, name=None):
         lv = lv_dict.get(data.lv, '未知')
         if lv == '白名单':
             ex = '+ ∞'
-        elif data.name is not None and schedall.low_activity and not schedall.check_ex:
+        elif data.name is not None and schedall.low_activity and not schedall.check_ex and not schedall.sync_sub_expire:
             ex = '__若21天无观看将封禁__'
-        elif data.name is not None and not schedall.low_activity and not schedall.check_ex:
+        elif data.name is not None and not schedall.low_activity and not schedall.check_ex and not schedall.sync_sub_expire:
             ex = ' __无需保号，放心食用__'
         else:
             ex = data.ex or '无账户信息'

@@ -13,7 +13,7 @@ cache = Cache()
 """start面板 ↓"""
 
 
-def judge_start_ikb(is_admin: bool, account: bool) -> InlineKeyboardMarkup:
+def judge_start_ikb(is_admin: bool, account: bool, have_bindsub: bool = False, is_in_group: bool = False) -> InlineKeyboardMarkup:
     """
     start面板按钮
     """
@@ -28,10 +28,19 @@ def judge_start_ikb(is_admin: bool, account: bool) -> InlineKeyboardMarkup:
             d.append(['🏪 兑换商店', 'storeall'])
     else:
         d = [['️👥 用户功能', 'members'], ['🌐 服务器', 'server']]
-        if schedall.check_ex: d.append(['🎟️ 使用续期码', 'exchange'])
-    if _open.checkin: d.append([f'🎯 签到', 'checkin'])
+        if schedall.check_ex:
+            d.append(['🎟️ 使用续期码', 'exchange'])
+        if not is_in_group and have_bindsub:
+            d.append(['🔗 加入群组', 'group_invite'])
+    if not have_bindsub:
+        d.append(['✈️ 绑定订阅', 'bind_sub'])
+    else:
+        d.append(['🚀 更改订阅', 'change_sub'])
+    if _open.checkin:
+        d.append([f'🎯 签到', 'checkin'])
     lines = array_chunk(d, 2)
-    if is_admin: lines.append([['👮🏻‍♂️ admin', 'manage']])
+    if is_admin:
+        lines.append([['👮🏻‍♂️ admin', 'manage']])
     keyword = ikb(lines)
     return keyword
 
@@ -46,7 +55,7 @@ judge_group_ikb = ikb([[('🌟 频道入口 ', f't.me/{chanel}', 'url'),
 """members ↓"""
 
 
-def members_ikb(is_admin: bool = False, account: bool = False) -> InlineKeyboardMarkup:
+def members_ikb(is_admin: bool = False, account: bool = False, have_bindsub: bool = False) -> InlineKeyboardMarkup:
     """
     判断用户面板
     """
@@ -60,10 +69,7 @@ def members_ikb(is_admin: bool = False, account: bool = False) -> InlineKeyboard
         normal.append([('♻️ 主界面', 'back_start')])
         return ikb(normal)
     else:
-        return judge_start_ikb(is_admin, account)
-        # return ikb(
-        #     [[('👑 创建账户', 'create')], [('⭕ 换绑TG', 'changetg'), ('🔍 绑定TG', 'bindtg')],
-        #      [('♻️ 主界面', 'back_start')]])
+        return judge_start_ikb(is_admin, account, have_bindsub)
 
 
 back_start_ikb = ikb([[('💫 回到首页', 'back_start')]])
@@ -76,6 +82,7 @@ re_delme_ikb = ikb([[('♻️ 重试', 'delme')], [('🔙 返回', 'members')]])
 re_reset_ikb = ikb([[('♻️ 重试', 'reset')], [('🔙 返回', 'members')]])
 re_exchange_b_ikb = ikb([[('♻️ 重试', 'exchange'), ('❌ 关闭', 'closeit')]])
 re_born_ikb = ikb([[('✨ 重输', 'store-reborn'), ('💫 返回', 'storeall')]])
+re_bind_sub_ikb = ikb([[('✨ 重输', 'bind_sub'), ('💫 返回', 'members')]])
 
 
 def send_changetg_ikb(cr_id, rp_id):
@@ -339,6 +346,7 @@ def config_preparation() -> InlineKeyboardMarkup:
     fuxx_pt = '✅' if fuxx_pitao else '❎'
     red_envelope_status = '✅' if red_envelope.status else '❎'
     allow_private = '✅' if red_envelope.allow_private else '❎'
+    check_sub = '✅' if _open.check_sub_on_join else '❎'
     keyboard = ikb(
         [[('📄 导出日志', 'log_out'), ('📌 设置探针', 'set_tz')],
          [('🎬 显/隐指定库', 'set_block'), (f'{fuxx_pt} 皮套人过滤功能', 'set_fuxx_pitao')],
@@ -347,6 +355,7 @@ def config_preparation() -> InlineKeyboardMarkup:
          [(f'{auto_up} 自动更新bot', 'set_update'), (f'{mp_set} Moviepilot点播', 'set_mp')],
          [(f'{red_envelope_status} 红包', 'set_red_envelope_status'), (f'{allow_private} 专属红包', 'set_red_envelope_allow_private')],
          [(f'设置赠送资格天数({kk_gift_days}天)', 'set_kk_gift_days')],
+         [(f'{check_sub} 入群检测订阅', 'set_check_sub_on_join')],
          [('🔙 返回', 'manage')]])
     return keyboard
 
@@ -432,16 +441,20 @@ def sched_buttons():
     dayplayrank = '✅' if schedall.dayplayrank else '❎'
     weekplayrank = '✅' if schedall.weekplayrank else '❎'
     check_ex = '✅' if schedall.check_ex else '❎'
+    sync_sub_expire = '✅' if schedall.sync_sub_expire else '❎'
     low_activity = '✅' if schedall.low_activity else '❎'
     backup_db = '✅' if schedall.backup_db else '❎'
+    kick_not_emby = '✅' if schedall.kick_not_emby else '❎'
     keyboard = InlineKeyboard(row_width=2)
     keyboard.add(InlineButton(f'{dayrank} 播放日榜', f'sched-dayrank'),
                  InlineButton(f'{weekrank} 播放周榜', f'sched-weekrank'),
                  InlineButton(f'{dayplayrank} 观影日榜', f'sched-dayplayrank'),
                  InlineButton(f'{weekplayrank} 观影周榜', f'sched-weekplayrank'),
                  InlineButton(f'{check_ex} 到期保号', f'sched-check_ex'),
+                 InlineButton(f'{sync_sub_expire} 订阅保号', f'sched-sync_sub_expire'),
                  InlineButton(f'{low_activity} 活跃保号', f'sched-low_activity'),
-                 InlineButton(f'{backup_db} 自动备份数据库', f'sched-backup_db')
+                 InlineButton(f'{backup_db} 自动备份数据库', f'sched-backup_db'),
+                 InlineButton(f'{kick_not_emby} 自动踢出无号崽', f'sched-kick_not_emby')
                  )
     keyboard.row(InlineButton(f'🫧 返回', 'manage'))
     return keyboard

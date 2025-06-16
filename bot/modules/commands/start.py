@@ -8,7 +8,7 @@ import asyncio
 from pyrogram import filters
 
 from bot.func_helper.emby import Embyservice
-from bot.func_helper.utils import judge_admins, members_info, open_check
+from bot.func_helper.utils import judge_admins, members_info, open_check, judge_have_bindsub
 from bot.modules.commands.exchange import rgs_code
 from bot.sql_helper.sql_emby import sql_add_emby
 from bot.func_helper.filters import user_in_group_filter, user_in_group_on_filter
@@ -16,7 +16,7 @@ from bot.func_helper.msg_utils import deleteMessage, sendMessage, sendPhoto, cal
 from bot.func_helper.fix_bottons import group_f, judge_start_ikb, judge_group_ikb, cr_kk_ikb
 from bot.modules.extra import user_cha_ip
 from bot import bot, prefixes, group, bot_photo, ranks, sakura_b
-
+from bot.sql_helper.sql_proxy_user import sql_get_proxy_user_by_tg
 
 # 反命令提示
 @bot.on_message((filters.command('start', prefixes) | filters.command('count', prefixes)) & filters.chat(group))
@@ -47,12 +47,12 @@ async def count_info(_, msg):
 # 私聊开启面板
 @bot.on_message(filters.command('start', prefixes) & filters.private)
 async def p_start(_, msg):
-    if not await user_in_group_filter(_, msg):
-        return await asyncio.gather(deleteMessage(msg),
-                                    sendMessage(msg,
-                                                '💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？\n\n'
-                                                '⁉️ ps：如果您已在群组中且收到此消息，请联系管理员解除您的权限限制，因为被限制用户无法使用本bot。',
-                                                buttons=judge_group_ikb))
+    # if not await user_in_group_filter(_, msg):
+    #     return await asyncio.gather(deleteMessage(msg),
+    #                                 sendMessage(msg,
+    #                                             '💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？\n\n'
+    #                                             '⁉️ ps：如果您已在群组中且收到此消息，请联系管理员解除您的权限限制，因为被限制用户无法使用本bot。',
+    #                                             buttons=judge_group_ikb))
     try:
         u = msg.command[1].split('-')[0]
         if u == 'userip':
@@ -79,45 +79,50 @@ async def p_start(_, msg):
             return
         name, lv, ex, us, embyid, pwd2 = data
         stat, all_user, tem, timing = await open_check()
+        have_bindsub = judge_have_bindsub(msg.from_user.id)
+        is_in_group = await user_in_group_filter(_, msg)
         text = f"▎__欢迎进入用户面板！{msg.from_user.first_name}__\n\n" \
                f"**· 🆔 用户のID** | `{msg.from_user.id}`\n" \
                f"**· 📊 当前状态** | {lv}\n" \
                f"**· 🍒 积分{sakura_b}** | {us}\n" \
+               f"**· ✈️ 订阅状态** | {'已绑定' if have_bindsub else '未绑定'}\n" \
                f"**· ®️ 注册状态** | {stat}\n" \
                f"**· 🎫 总注册限制** | {all_user}\n" \
                f"**· 🎟️ 可注册席位** | {all_user - tem}\n"
         if not embyid:
             await asyncio.gather(deleteMessage(msg),
-                                 sendPhoto(msg, bot_photo, caption=text, buttons=judge_start_ikb(is_admin, False)))
+                                 sendPhoto(msg, bot_photo, caption=text, buttons=judge_start_ikb(is_admin, False, have_bindsub)))
         else:
             await asyncio.gather(deleteMessage(msg),
                                  sendPhoto(msg, bot_photo,
                                            f"**✨ 只有你想见我的时候我们的相遇才有意义**\n\n🍉__你好鸭 [{msg.from_user.first_name}](tg://user?id={msg.from_user.id}) 请选择功能__👇",
-                                           buttons=judge_start_ikb(is_admin, True)))
+                                           buttons=judge_start_ikb(is_admin, True, have_bindsub, is_in_group)))
 
 
 # 返回面板
 @bot.on_callback_query(filters.regex('back_start'))
 async def b_start(_, call):
-    if await user_in_group_filter(_, call):
-        is_admin = judge_admins(call.from_user.id)
-        await asyncio.gather(callAnswer(call, "⭐ 返回start"),
-                             editMessage(call,
-                                         text=f"**✨ 只有你想见我的时候我们的相遇才有意义**\n\n🍉__你好鸭 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) 请选择功能__👇",
-                                         buttons=judge_start_ikb(is_admin, account=True)))
-    elif not await user_in_group_filter(_, call):
-        await asyncio.gather(callAnswer(call, "⭐ 返回start"),
-                             editMessage(call, text='💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？\n\n'
-                                                    '⁉️ ps：如果您已在群组中且收到此消息，请联系管理员解除您的权限限制，因为被限制用户无法使用本bot。',
-                                         buttons=judge_group_ikb))
+    # if await user_in_group_filter(_, call):
+    is_admin = judge_admins(call.from_user.id)
+    have_bindsub = judge_have_bindsub(call.from_user.id)
+    is_in_group = await user_in_group_filter(_, call)
+    await asyncio.gather(callAnswer(call, "⭐ 返回start"),
+                            editMessage(call,
+                                        text=f"**✨ 只有你想见我的时候我们的相遇才有意义**\n\n🍉__你好鸭 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) 请选择功能__👇",
+                                        buttons=judge_start_ikb(is_admin, account=True, have_bindsub=have_bindsub, is_in_group=is_in_group)))
+    # elif not await user_in_group_filter(_, call):
+    #     await asyncio.gather(callAnswer(call, "⭐ 返回start"),
+    #                          editMessage(call, text='💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？\n\n'
+    #                                                 '⁉️ ps：如果您已在群组中且收到此消息，请联系管理员解除您的权限限制，因为被限制用户无法使用本bot。',
+    #                                      buttons=judge_group_ikb))
 
 
 @bot.on_callback_query(filters.regex('store_all'))
 async def store_alls(_, call):
-    if not await user_in_group_filter(_, call):
-        await asyncio.gather(callAnswer(call, "⭐ 返回start"),
-                             deleteMessage(call), sendPhoto(call, bot_photo,
-                                                            '💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？',
-                                                            judge_group_ikb))
-    elif await user_in_group_filter(_, call):
+    # if not await user_in_group_filter(_, call):
+    #     await asyncio.gather(callAnswer(call, "⭐ 返回start"),
+    #                          deleteMessage(call), sendPhoto(call, bot_photo,
+    #                                                         '💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？',
+    #                                                         judge_group_ikb))
+    if await user_in_group_filter(_, call):
         await callAnswer(call, '⭕ 正在编辑', True)

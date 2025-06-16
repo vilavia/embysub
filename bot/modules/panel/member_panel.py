@@ -15,17 +15,20 @@ from bot import bot, LOGGER, _open, emby_line, sakura_b, ranks, group, extra_emb
 from pyrogram import filters
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import user_in_group_on_filter
-from bot.func_helper.utils import members_info, tem_adduser, cr_link_one, judge_admins, tem_deluser, pwd_create
+from bot.func_helper.utils import members_info, tem_adduser, cr_link_one, judge_admins, tem_deluser, pwd_create, judge_have_bindsub,cr_link_two
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
     re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
-    store_ikb, re_bindtg_ikb, close_it_ikb, store_query_page, re_born_ikb, send_changetg_ikb, favorites_page_ikb
+    store_ikb, re_bindtg_ikb, close_it_ikb, store_query_page, re_born_ikb, send_changetg_ikb, favorites_page_ikb,re_bind_sub_ikb,gog_rester_ikb
 from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage
 from bot.modules.commands import p_start
 from bot.modules.commands.exchange import rgs_code
 from bot.sql_helper.sql_code import sql_count_c_code
-from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby, sql_delete_emby
+from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby, sql_add_emby
 from bot.sql_helper.sql_emby2 import sql_get_emby2, sql_delete_emby2
-
+from bot.func_helper.subutil import verify_sub_content
+from bot.sql_helper.sql_proxy_user import sql_get_proxy_user_by_tg, sql_add_proxy_user, sql_delete_proxy_user, sql_update_proxy_user, sql_get_proxy_user_by_token
+from bot.sql_helper.proxy_sub_engine import get_sub_by_token
+from bot.func_helper.filters import user_in_group_filter
 # 创号函数
 async def create_user(_, call, us, stats):
     msg = await ask_return(call,
@@ -65,7 +68,7 @@ async def create_user(_, call, us, stats):
                                                                                     pwd2=emby_pwd2, lv='b',
                                                                                     cr=datetime.now(), ex=ex,
                                                                                     us=0)
-            if schedall.check_ex:
+            if schedall.check_ex or schedall.sync_sub_expire:
                 ex = ex.strftime("%Y-%m-%d %H:%M:%S")
             elif schedall.low_activity:
                 ex = '__若21天无观看将封禁__'
@@ -92,18 +95,21 @@ async def members(_, call):
     if not data:
         return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start录入', True)
     await callAnswer(call, f"✅ 用户界面")
+    have_bindsub = judge_have_bindsub(call.from_user.id)
     name, lv, ex, us, embyid, pwd2 = data
     text = f"▎__欢迎进入用户面板！{call.from_user.first_name}__\n\n" \
            f"**· 🆔 用户のID** | `{call.from_user.id}`\n" \
            f"**· 📊 当前状态** | {lv}\n" \
            f"**· 🍒 积分{sakura_b}** | {us}\n" \
+           f"**· ✈️ 订阅状态** | {'已绑定' if have_bindsub else '未绑定'}\n" \
            f"**· 💠 账号名称** | [{name}](tg://user?id={call.from_user.id})\n" \
            f"**· 🚨 到期时间** | {ex}"
+    have_bindsub = judge_have_bindsub(call.from_user.id)
     if not embyid:
         is_admin = judge_admins(call.from_user.id)
-        await editMessage(call, text, members_ikb(is_admin, False))
+        await editMessage(call, text, members_ikb(is_admin, False, have_bindsub))
     else:
-        await editMessage(call, text, members_ikb(account=True))
+        await editMessage(call, text, members_ikb(account=True, have_bindsub=have_bindsub))
 
 
 # 创建账户
@@ -162,6 +168,15 @@ async def change_tg(_, call):
         # 清空原账号信息但保留tg
         if sql_update_emby(Emby.tg == replace_id, embyid=None, name=None, pwd=None, pwd2=None, 
                           lv='d', cr=None, ex=None, us=0, iv=0, ch=None):
+            replace_proxy_user = sql_get_proxy_user_by_tg(tg=replace_id)
+            current_proxy_user = sql_get_proxy_user_by_tg(tg=current_id)
+
+            if replace_proxy_user:
+                if current_proxy_user:
+                    sql_update_proxy_user(tg=current_id, token=replace_proxy_user.token, id=replace_proxy_user.id, expired_at=replace_proxy_user.expired_at, bind_url=replace_proxy_user.bind_url)
+                else:
+                    sql_add_proxy_user(tg=current_id, id=replace_proxy_user.id, token=replace_proxy_user.token, expired_at=replace_proxy_user.expired_at, bind_url=replace_proxy_user.bind_url)
+                sql_delete_proxy_user(tg=replace_id)
             LOGGER.info(f'【TG改绑】清空原账户 id{e.tg} 成功')
         else:
             await bot.send_message(current_id, "🍰 **⭕#TG改绑 原账户清空错误，请联系闺蜜（管理）！**")
@@ -398,6 +413,7 @@ async def del_emby(_, call):
     if await emby.emby_del(embyid):
         sql_update_emby(Emby.embyid == embyid, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None, ex=None)
         tem_deluser()
+        sql_delete_proxy_user(tg=call.from_user.id)
         send1 = await editMessage(call, '🗑️ 好了，已经为您删除...\n愿来日各自安好，山高水长，我们有缘再见！',
                                   buttons=back_members_ikb)
         if send1 is False:
@@ -774,3 +790,204 @@ async def my_devices(_, call):
             if not chunk_text.strip():
                 continue
             await sendMessage(call.message, chunk_text, buttons=close_it_ikb)
+
+@bot.on_callback_query(filters.regex('bind_sub'))
+async def bind_subscription(_, call):
+    """绑定订阅链接"""
+    await asyncio.gather(callAnswer(call, '✈️ 绑定订阅'), deleteMessage(call))
+    tgid = call.from_user.id
+    msg = await ask_return(call, 
+                           text='✈️ 【绑定订阅】：\n请 在120s内 发送您的订阅链接，格式如：\n`https://example.com/sub?token=xxx`\n\n'
+             '退出请点击 /cancel',
+                           button=re_bind_sub_ikb)
+    if not msg:
+        return
+    elif msg.text == '/cancel':
+        return await asyncio.gather(msg.delete(), p_start(_, msg))
+    try:
+        subscribe_url = msg.text.strip()
+        # 验证订阅链接
+        valid, token, expire, error_msg = await verify_sub_content(subscribe_url, config.proxy_sub_config.model_dump())
+        if not valid:
+            return await sendMessage(msg, '❌ 无效的订阅链接，请重新输入', buttons=re_bind_sub_ikb)
+        # 检查token是否已被其他用户绑定
+        existing_user = sql_get_proxy_user_by_token(token)
+        if existing_user and existing_user.tg != tgid:
+            return await sendMessage(msg, '❌ 该订阅已绑定其他账号，请重新输入', buttons=re_bind_sub_ikb)
+
+        proxy_user = sql_get_proxy_user_by_tg(tg=tgid)
+        if proxy_user and proxy_user.is_bound:
+            return await sendMessage(msg, '❌ 您已绑定了订阅，无需绑定。', buttons=back_members_ikb)
+        sub_info = get_sub_by_token(token)
+        if not sub_info:
+            return await sendMessage(msg, '❌ 无法获取订阅信息。', buttons=back_members_ikb)
+
+        id = sub_info.get('id')
+        expired_at = sub_info.get('expired_at')
+        token = sub_info.get('token')
+        if id is None or token is None:
+            return await sendMessage(msg, '❌ 无法获取订阅信息。', buttons=back_members_ikb)
+
+        emby_ex = expired_at
+         # 处理订阅时间
+        days = 1
+        if expired_at == 0 or expired_at is None:
+            days = 3650
+            emby_ex = int((datetime.now() + timedelta(days=days)).timestamp())
+            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
+            message = '✅ 订阅绑定成功, 你的订阅为永久订阅'
+        elif expired_at <= datetime.now().timestamp():
+            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
+            message = '❌ 订阅已过期，请重新输入'
+            return await sendMessage(msg, message, buttons=back_members_ikb)
+        else:
+            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
+            message = f'✅ 订阅绑定成功, 你的订阅将于 {expired_at_str} 到期'
+            days = (expired_at - datetime.now().timestamp()) / 86400
+            # 如果剩余天数小于1天但大于0天，将其向上取整为1天
+            if 0 < days < 1:
+                days = 1
+        # 更新数据库
+        if proxy_user:
+            sql_update_proxy_user(tg=tgid, id=id, token=token, expired_at=expired_at, bind_url=subscribe_url)
+        else:
+            sql_add_proxy_user(
+                tg=tgid,
+                id=id,
+                token=token,
+                expired_at=expired_at,
+                bind_url=subscribe_url
+            )
+        # 处理 Emby 账号
+        sql_add_emby(tgid)
+        emby_user = sql_get_emby(tg=tgid)
+        await sendMessage(msg, message, buttons=back_members_ikb)
+        if emby_user.embyid is None or emby_user.embyid == '':
+            link = await cr_link_two(tg=tgid, for_tg=tgid, days=days)
+            await sendMessage(msg, "🌟 您已获得注册资格。进行点击领取！", buttons=gog_rester_ikb(link))
+            LOGGER.info(f"【订阅绑定】 已发送 注册资格 {tgid} - 到期时间{expired_at_str}")
+        else:
+            if emby_user.lv == 'c':
+                sql_update_emby(Emby.tg == tgid, lv='b', ex=datetime.fromtimestamp(emby_ex))
+            else:
+                sql_update_emby(Emby.tg == tgid, ex=datetime.fromtimestamp(emby_ex))
+            await sendMessage(msg, f"🌟 已更新账号到期时间为 {expired_at_str}")
+            await emby.emby_change_policy(id=tgid, method=False)
+        LOGGER.info(f"【订阅绑定】用户 {tgid} 成功绑定订阅，到期时间：{expired_at_str}")
+        # 检查用户是否在群组中
+        is_in_group = False
+        # 为第一个群组创建邀请链接
+        group_id = int(group[0])
+        try:
+            is_in_group = await user_in_group_filter(_, call)
+        except Exception as e:
+            LOGGER.error(f"检查用户是否在群组中出错: {e}")
+        # 如果用户不在群组中，创建一个限制性的邀请链接
+        if not is_in_group and len(group) > 0:
+            try:
+                ex = datetime.now() + timedelta(minutes=5)
+                # 创建一个只能邀请一人且5分钟内到期的邀请链接
+                invite_link = await bot.create_chat_invite_link(
+                    chat_id=group_id,
+                    member_limit=1,
+                    expire_date= ex  # 5分钟后到期
+                )
+  
+                if invite_link and invite_link.invite_link:
+                    await sendMessage(
+                        msg,
+                        f"🔗 您尚未加入我们的群组，请使用以下链接加入（仅限您一人使用，5分钟内有效）：\n\n{invite_link.invite_link}"
+                    )
+                    LOGGER.info(f"【订阅绑定】为用户 {tgid} 创建了限时群组邀请链接")
+            except Exception as e:
+                LOGGER.error(f"创建邀请链接失败: {e}")
+                await sendMessage(msg, "⚠️ 无法创建群组邀请链接，请联系管理员获取邀请链接。")
+
+    except Exception as e:
+        LOGGER.error(f"【订阅绑定】发生错误: {str(e)}")
+        return await sendMessage(msg, '❌ 绑定失败，请稍后重试。', buttons=back_members_ikb)
+
+@bot.on_callback_query(filters.regex('change_sub') & user_in_group_on_filter)
+async def change_sub(_, call):
+    await asyncio.gather(callAnswer(call, '更改订阅'), deleteMessage(call))
+    msg = await ask_return(call, 
+                           text='✈️ 【更改订阅】：\n请 在120s内 发送您的订阅链接，格式如：\n`https://example.com/sub?token=xxx`\n\n'
+             '退出请点击 /cancel',
+                           button=re_bind_sub_ikb)
+    if not msg:
+        return
+    elif msg.text == '/cancel':
+        return await asyncio.gather(msg.delete(), p_start(_, msg))
+    try:
+        subscribe_url = msg.text.strip()
+        # 验证订阅链接
+        valid, token, expire, error_msg = await verify_sub_content(subscribe_url, config.proxy_sub_config.model_dump())
+        if not valid:
+            return await sendMessage(msg, '❌ 无效的订阅链接，请重新输入', buttons=re_bind_sub_ikb)
+    except Exception as e:
+        LOGGER.error(f"【更改订阅】发生错误: {str(e)}")
+        return await sendMessage(msg, '❌ 更改失败，请稍后重试。', buttons=back_members_ikb)
+    else:
+        proxy_user = sql_get_proxy_user_by_tg(tg=call.from_user.id)
+        if not proxy_user:
+            return await sendMessage(msg, '❌ 您还没有绑定订阅，请先绑定订阅。', buttons=back_members_ikb)
+        sub_info = get_sub_by_token(token)
+        if not sub_info:
+            return await sendMessage(msg, '❌ 无法获取订阅信息。', buttons=back_members_ikb)
+        id = sub_info.get('id')
+        expired_at = sub_info.get('expired_at')
+        token = sub_info.get('token')
+        if id is None or token is None:
+            return await sendMessage(msg, '❌ 无法获取订阅信息。', buttons=back_members_ikb)
+        emby_ex = expired_at
+         # 处理订阅时间
+        if expired_at == 0 or expired_at is None:
+            emby_ex = int((datetime.now() + timedelta(days=3650)).timestamp())
+            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
+            message = '✅ 订阅更改绑定成功, 你的订阅为永久订阅'
+        elif expired_at <= datetime.now().timestamp():
+            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
+            message = '❌ 订阅已过期，请重新输入'
+            return await sendMessage(msg, message, buttons=back_members_ikb)
+        else:
+            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
+            message = f'✅ 订阅更改绑定成功, 你的订阅将于 {expired_at_str} 到期'
+        sql_update_proxy_user(tg=call.from_user.id, id=id, token=token, expired_at=expired_at, bind_url=subscribe_url)
+        emby_user = sql_get_emby(tg=call.from_user.id)
+        if emby_user.lv == 'c':
+            sql_update_emby(Emby.tg == call.from_user.id, lv='b', ex=datetime.fromtimestamp(emby_ex))
+        else:
+            sql_update_emby(Emby.tg == call.from_user.id, ex=datetime.fromtimestamp(emby_ex))
+        await sendMessage(msg, message)
+        await emby.emby_change_policy(id=call.from_user.id, method=False)
+
+
+@bot.on_callback_query(filters.regex('group_invite'))
+async def group_invite(_, call):
+    await asyncio.gather(callAnswer(call, '🔍 正在检查群组'), deleteMessage(call))
+    get_emby = sql_get_emby(tg=call.from_user.id)
+    if get_emby is None or get_emby.embyid is None or get_emby.embyid == '':
+        return await callAnswer(call, '您还没有Emby账户', True)
+    # 检查用户是否在群组中
+    is_in_group = False
+    # 为第一个群组创建邀请链接
+    group_id = int(group[0])
+    try:
+        is_in_group = await user_in_group_filter(_, call)
+    except Exception as e:
+        LOGGER.error(f"检查用户是否在群组中出错: {e}")
+    if not is_in_group:
+        ex = datetime.now() + timedelta(minutes=5)
+        # 创建一个只能邀请一人且5分钟内到期的邀请链接
+        invite_link = await bot.create_chat_invite_link(
+            chat_id=group_id,
+            member_limit=1,
+            expire_date= ex  # 5分钟后到期
+        )
+        if invite_link and invite_link.invite_link:
+            await sendMessage(
+                call,
+                f"🔗 您尚未加入我们的群组，请使用以下链接加入（仅限您一人使用，5分钟内有效）：\n\n{invite_link.invite_link}"
+            )
+    else:
+        await sendMessage(call, "✅ 您已加入我们的群组，无需进行操作。")

@@ -6,13 +6,13 @@ import asyncio
 
 from pyrogram import filters
 
-from bot import bot, _open, save_config, bot_photo, LOGGER, bot_name, admins, owner
+from bot import bot, _open, save_config, bot_photo, LOGGER, bot_name, admins, owner, sakura_b
 from bot.func_helper.filters import admins_on_filter
 from bot.schemas import ExDate
 from bot.sql_helper.sql_code import sql_count_code, sql_count_p_code, sql_delete_all_unused, sql_delete_unused_by_days
 from bot.sql_helper.sql_emby import sql_count_emby
 from bot.func_helper.fix_bottons import gm_ikb_content, open_menu_ikb, gog_rester_ikb, back_open_menu_ikb, \
-    back_free_ikb, re_cr_link_ikb, close_it_ikb, ch_link_ikb, date_ikb, cr_paginate, cr_renew_ikb, invite_lv_ikb
+    back_free_ikb, re_cr_link_ikb, close_it_ikb, ch_link_ikb, date_ikb, cr_paginate, cr_renew_ikb, invite_lv_ikb, config_preparation
 from bot.func_helper.msg_utils import callAnswer, editMessage, sendPhoto, callListen, deleteMessage, sendMessage
 from bot.func_helper.utils import open_check, cr_link_one,rn_link_one
 

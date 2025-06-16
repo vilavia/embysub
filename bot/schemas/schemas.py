@@ -1,7 +1,7 @@
 import json
 import os
 from pydantic import BaseModel, Field
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 
 
 # 嵌套式的数据设计，规范数据 config.json
@@ -51,6 +51,7 @@ class Open(BaseModel):
     invite_lv: Optional[str] = 'b'
     leave_ban: bool
     uplays: bool = True
+    check_sub_on_join: bool = False  # 入群检测订阅开关
     checkin_reward: Optional[List[int]] = [1, 10]
     exchange_cost: int = 300
     whitelist_cost: int = 9999
@@ -79,6 +80,8 @@ class Schedall(BaseModel):
     restart_chat_id: int = 0
     restart_msg_id: int = 0
     backup_db: bool = True
+    sync_sub_expire: bool = True
+    kick_not_emby: bool = False
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -129,6 +132,26 @@ class API(BaseModel):
 class RedEnvelope(BaseModel):
     status: bool = True  # 是否开启红包
     allow_private: bool = True # 是否允许专属红包
+
+class ProxySubDBConfig(BaseModel):
+    db_host: str = ""
+    db_user: str = ""
+    db_pwd: str = ""
+    db_name: str = ""
+    db_port: int = 3306
+    get_all_sub_sql: str = "select v2_user.id as id, v2_user.expired_at as expired_at, v2_user.token as token from v2_user"
+    get_sub_by_token_sql: str = "select v2_user.id as id, v2_user.expired_at as expired_at, v2_user.token as token from v2_user where v2_user.token = :token"
+class ProxySubConfig(BaseModel):
+    status: bool = False
+    proxy_sub_db_config: ProxySubDBConfig = Field(default_factory=ProxySubDBConfig)
+    allow_domains: List[str] = []
+    token_key: str = "token"
+    path_key: str = "s"
+    validate_content: bool = False
+    expired_at_keyword: str = ""
+    limit_keywords: List[str] = []
+    must_keywords: List[str] = []
+    validate_by_clash_user_agent: bool = True
 
 class Config(BaseModel):
     bot_name: str
@@ -183,6 +206,7 @@ class Config(BaseModel):
     auto_update: AutoUpdate = Field(default_factory=AutoUpdate)
     red_envelope: RedEnvelope = Field(default_factory=RedEnvelope)
     api: API = Field(default_factory=API)
+    proxy_sub_config: ProxySubConfig = Field(default_factory=ProxySubConfig)
 
     def __init__(self, **data):
         super().__init__(**data)

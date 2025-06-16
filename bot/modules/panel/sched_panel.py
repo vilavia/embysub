@@ -39,6 +39,8 @@ action_dict = {
     "check_ex": check_expired,
     "low_activity": check_low_activity,
     "backup_db": auto_backup_db,
+    "sync_sub_expire": sync_sub_expire,
+    "kick_not_emby": kick_not_emby,
 }
 
 # 字典，对应的操作函数的参数和id
@@ -48,6 +50,8 @@ args_dict = {
     "dayplayrank": {'hour': 23, 'minute': 0, 'id': 'user_day_plays'},
     "weekplayrank": {'day_of_week': "sun", 'hour': 23, 'minute': 0, 'id': 'user_week_plays'},
     "check_ex": {'hour': 1, 'minute': 30, 'id': 'check_expired'},
+    "sync_sub_expire": {'hour': 0, 'minute': 30, 'id': 'sync_sub_expire'},
+    "kick_not_emby": {'hour': 2, 'minute': 0, 'id': 'kick_not_emby'},
     "low_activity": {'hour': 8, 'minute': 30, 'id': 'check_low_activity'},
     "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'},
 }
@@ -95,6 +99,11 @@ async def check_ex_admin(_, msg):
     await check_expired()
     await asyncio.gather(msg.delete(), send.edit("✅ 【到期检测结束】"))
 
+@bot.on_message(filters.command('sync_sub_expire', prefixes) & admins_on_filter)
+async def sync_sub_expire_admin(_, msg):
+    await deleteMessage(msg)
+    text = await sync_sub_expire()
+    await msg.reply(f"{text}")
 
 # bot数据库手动备份
 @bot.on_message(filters.command('backup_db', prefixes) & filters.user(owner))
@@ -228,7 +237,7 @@ async def update_bot(force: bool = False, msg: Message = None, manual: bool = Fa
             LOGGER.info(message)
 
     else:
-        text = '【AutoUpdate_Bot】失败，请检查 git_repo 是否正确，形如 `berry8838/Sakura_embyboss`'
+        text = '【AutoUpdate_Bot】失败，请检查 git_repo 是否正确，形如 `cysnn/embysub`'
         await bot.send_message(chat_id=group[0], text=text) if not msg else await msg.edit(text)
         LOGGER.info(text)
 

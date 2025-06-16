@@ -414,3 +414,17 @@ async def set_red_envelope_allow_private(_, call):
     await config_p_re(_, call)
     save_config()
     LOGGER.info(log_message)
+
+@bot.on_callback_query(filters.regex('set_check_sub_on_join') & admins_on_filter)
+async def set_check_sub_on_join(_, call):
+    config.open.check_sub_on_join = not config.open.check_sub_on_join
+    if config.open.check_sub_on_join:
+        message = '👮🏻‍♂️ 您已开启 入群检测订阅，现在用户入群时会检测订阅状态'
+        log_message = f"【admin】：管理员 {call.from_user.first_name} 已调整 入群检测订阅 True"
+    else:
+        message = '👮🏻‍♂️ 您已关闭 入群检测订阅，现在用户入群时不会检测订阅状态'
+        log_message = f"【admin】：管理员 {call.from_user.first_name} 已调整 入群检测订阅 False"
+    await callAnswer(call, message, True)
+    await config_p_re(_, call)
+    save_config()
+    LOGGER.info(log_message)

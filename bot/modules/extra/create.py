@@ -111,10 +111,10 @@ async def uun_info(_, msg, name = None):
     except AttributeError:
         a = ''
 
-    if e.name and schedall.low_activity and not schedall.check_ex:
+    if e.name and schedall.low_activity and not schedall.check_ex and not schedall.sync_sub_expire:
         ex = '__若21天无观看将封禁__'
 
-    elif e.name and not schedall.low_activity and not schedall.check_ex:
+    elif e.name and not schedall.low_activity and not schedall.check_ex and not schedall.sync_sub_expire:
         ex = ' __无需保号，放心食用__'
     else:
         ex = e.ex or '无账户信息'

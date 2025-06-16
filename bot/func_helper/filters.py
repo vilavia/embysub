@@ -52,6 +52,8 @@ async def user_in_group_filter(client, update):
             u = await client.get_chat_member(chat_id=int(i), user_id=uid)
             if u.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.MEMBER, ChatMemberStatus.OWNER]:
                 return True
+            elif u.status == ChatMemberStatus.BANNED:
+                return False
         except BadRequest as e:
             if e.ID == 'USER_NOT_PARTICIPANT':
                 return False
@@ -82,14 +84,20 @@ async def user_in_group_on_filter(filt, client, update):
             if u.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.MEMBER,
                             ChatMemberStatus.OWNER]:  # 移除了 'ChatMemberStatus.RESTRICTED' 防止有人进群直接注册不验证
                 return True  # 因为被限制用户无法使用bot，所以需要检查权限。
+            elif u.status == ChatMemberStatus.BANNED:
+                await client.send_message(chat_id=uid, text=f'🫡您已被加入黑名单，无法使用bot！')
+                return False
         except BadRequest as e:
             if e.ID == 'USER_NOT_PARTICIPANT':
+                await client.send_message(chat_id=uid, text=f'🫡您不在群组中，请先加入群组再来叭')
                 return False
             elif e.ID == 'CHAT_ADMIN_REQUIRED':
                 LOGGER.error(f"bot不能在 {i} 中工作，请检查bot是否在群组及其权限设置")
                 return False
             else:
                 return False
+        except Exception as e:
+            return False
     return False
 
 

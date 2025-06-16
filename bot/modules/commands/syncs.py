@@ -22,7 +22,7 @@ from bot.func_helper.utils import tem_deluser
 from bot.sql_helper.sql_emby import get_all_emby, Emby, sql_get_emby, sql_update_embys, sql_delete_emby, sql_update_emby
 from bot.func_helper.msg_utils import deleteMessage, sendMessage, sendPhoto
 from bot.sql_helper.sql_emby2 import sql_get_emby2
-
+from bot.scheduler.kick_not_emby import kick_not_emby
 
 @bot.on_message(filters.command('syncgroupm', prefixes) & admins_on_filter)
 async def sync_emby_group(_, msg):
@@ -213,7 +213,7 @@ async def clear_deleted_account(_, msg):
 
 
 @bot.on_message(filters.command('kick_not_emby', prefixes) & admins_on_filter & filters.group)
-async def kick_not_emby(_, msg):
+async def kicknotemby(_, msg):
     await deleteMessage(msg)
     try:
         open_kick = msg.command[1]
@@ -222,23 +222,8 @@ async def kick_not_emby(_, msg):
                                  '注意: 此操作会将 当前群组中无emby账户的选手kick, 如确定使用请输入 `/kick_not_emby true`')
     if open_kick == 'true':
         LOGGER.info(f"{msg.from_user.first_name} - {msg.from_user.id} 执行了踢出非emby用户的操作")
-        embyusers = get_all_emby(Emby.embyid is not None and Emby.embyid != '')
-        # get tgid
-        embytgs = []
-        if embyusers:
-            embytgs = [i.tg for i in embyusers]
-        chat_members = [member.user.id async for member in bot.get_chat_members(chat_id=msg.chat.id)]
-        until_date = datetime.now() + timedelta(minutes=1)
-        for cmember in chat_members:
-            if cmember not in embytgs:
-                try:
-                    await msg.chat.ban_member(cmember, until_date=until_date)
-                    await sendMessage(msg, f'{cmember} 已踢出', send=True)
-                    LOGGER.info(f"{cmember} 已踢出")
-                except Exception as e:
-                    LOGGER.info(f"踢出 {cmember} 失败，原因: {e}")
-                    pass
-@bot.on_message(filters.command('restore_from_db', prefixes) & filters.user(owner))
+        await kick_not_emby()
+@bot.on_message(filters.command('restore_from_db', prefixes) & admins_on_filter & filters.group)
 async def restore_from_db(_, msg):
     await deleteMessage(msg)
     try:
@@ -249,7 +234,7 @@ async def restore_from_db(_, msg):
     if confirm_restore == 'true':
         LOGGER.info(
             f"{msg.from_user.first_name} - {msg.from_user.id} 执行了从数据库中恢复用户到Emby中的操作")
-        embyusers = get_all_emby(Emby.embyid is not None and Emby.embyid != '')
+        embyusers = get_all_emby(Emby.embyid != None and Emby.embyid != '')
         # 获取当前执行命令的群组成员
         chat_members = [member.user.id async for member in bot.get_chat_members(chat_id=msg.chat.id)]
         await sendMessage(msg, '** 恢复中, 请耐心等待... **')
@@ -290,7 +275,7 @@ async def scan_embyname(_, msg):
         f"【扫描重复用户名任务开启】 - {msg.from_user.first_name} - {msg.from_user.id}")
 
     # 获取所有有效的emby用户
-    emby_users = get_all_emby(Emby.name is not None)
+    emby_users = get_all_emby(Emby.name != None)
     if not emby_users:
         return await send.edit("⚡扫描重复用户名任务\n\n结束！数据库中没有用户。")
 

@@ -2,14 +2,14 @@
 
 <p align="center">
 <img src="image/bot2.png" alt="bot"><br>
-<a href="https://github.com/berry8838/Sakura_embyboss/stargazers"><img src="https://img.shields.io/github/stars/berry8838/Sakura_embyboss" alt="stars"></a> 
-<a href="https://github.com/berry8838/Sakura_embyboss/forks"><img src="https://img.shields.io/github/forks/berry8838/Sakura_embyboss" alt="forks"></a> 
-<a href="https://github.com/berry8838/Sakura_embyboss/issues"><img src="https://img.shields.io/github/issues/berry8838/Sakura_embyboss" alt="issue"></a>  
-<a href="https://github.com/berry8838/Sakura_embyboss/blob/master/LICENSE"><img src="https://img.shields.io/github/license/berry8838/Sakura_embyboss" alt="license"></a> 
-<a href="https://hub.docker.com/r/jingwei520/sakura_embyboss" ><img src="https://img.shields.io/docker/v/jingwei520/sakura_embyboss/latest?logo=docker" alt="docker"></a>
-<a href="https://hub.docker.com/r/jingwei520/sakura_embyboss/tags" ><img src="https://img.shields.io/badge/platform-amd64%20arm64-pink" alt="plat"></a>
-<a href="https://github.com/berry8838/Sakura_embyboss/actions/workflows/publish-docker_on_master.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/berry8838/Sakura_embyboss/publish-docker_on_master.yml?branch=master" alt="Build status" />
+<a href="https://github.com/cysnn/embysub/stargazers"><img src="https://img.shields.io/github/stars/cysnn/embysub" alt="stars"></a> 
+<a href="https://github.com/cysnn/embysub/forks"><img src="https://img.shields.io/github/forks/cysnn/embysub" alt="forks"></a> 
+<a href="https://github.com/cysnn/embysub/issues"><img src="https://img.shields.io/github/issues/cysnn/embysub" alt="issue"></a>  
+<a href="https://github.com/cysnn/embysub/blob/master/LICENSE"><img src="https://img.shields.io/github/license/cysnn/embysub" alt="license"></a> 
+<a href="https://hub.docker.com/r/cuteys/embysub" ><img src="https://img.shields.io/docker/v/cuteys/embysub/latest?logo=docker" alt="docker"></a>
+<a href="https://hub.docker.com/r/cuteys/embysub/tags" ><img src="https://img.shields.io/badge/platform-amd64%20arm64-pink" alt="plat"></a>
+<a href="https://github.com/cysnn/embysub/actions/workflows/publish-docker_on_master.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/cysnn/embysub/publish-docker_on_master.yml?branch=master" alt="Build status" />
 </a>
 </p>
 <br>
@@ -26,8 +26,8 @@
 
 ## 💐 Our Contributors
 
-<a href="https://github.com/berry8838/Sakura_embyboss/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=berry8838/Sakura_embyboss" />
+<a href="https://github.com/cysnn/embysub/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=cysnn/embysub" />
 </a>  
 
 ## 特别感谢（排序不分先后）<img src="image/bixin.jpg" alt="比心" height=30>
@@ -44,4 +44,4 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=berry8838/Sakura_embyboss&type=Date)](https://star-history.com/#berry8838/Sakura_embyboss)
+[![Star History Chart](https://api.star-history.com/svg?repos=cysnn/embysub&type=Date)](https://star-history.com/#cysnn/embysub)

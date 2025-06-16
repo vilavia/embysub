@@ -62,6 +62,7 @@ red_envelope = config.red_envelope
 moviepilot = config.moviepilot
 auto_update = config.auto_update
 api = config.api
+proxy_sub_config = config.proxy_sub_config
 save_config()
 
 LOGGER.info("配置文件加载完毕")
@@ -94,6 +95,7 @@ admin_p = user_p + [
     BotCommand("scan_embyname", "扫描同名的用户记录 [管理]"),
     BotCommand("low_activity", "手动运行活跃检测 [管理]"),
     BotCommand("check_ex", "手动到期检测 [管理]"),
+    BotCommand("sync_sub_expire", "手动订阅到期检测 [管理]"),
     BotCommand("uranks", "召唤观影时长榜，失效时用 [管理]"),
     BotCommand("days_ranks", "召唤播放次数日榜，失效时用 [管理]"),
     BotCommand("week_ranks", "召唤播放次数周榜，失效时用 [管理]"),

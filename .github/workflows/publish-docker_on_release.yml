@@ -37,4 +37,4 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/sakura_embyboss:${{ github.event.release.tag_name }}
+            ${{ secrets.DOCKER_USERNAME }}/embysub:${{ github.event.release.tag_name }}
