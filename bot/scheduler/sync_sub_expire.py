@@ -61,8 +61,10 @@ async def sync_sub_expire():
             # 处理永久订阅
             if expired_at == 0 or expired_at is None:
                 # 设置为10年后
-                emby_ex = now.replace(year=now.year + 10)
-                is_expired = False
+                #emby_ex = now.replace(year=now.year + 10)
+                emby_ex = now - timedelta(days=2)
+                is_expired = True
+                LOGGER.info(f"✈️ 用户 {user.tg} 为永久订阅，设置到期时间为两天前以触发禁用")
             else:
                 # 转换时间戳为datetime
                 emby_ex = datetime.fromtimestamp(expired_at)
@@ -104,7 +106,11 @@ async def sync_sub_expire():
                     # 如果不是禁用状态，禁用账户
                     if await emby.emby_change_policy(emby_info.embyid, method=True):
                         if sql_update_emby(Emby.tg == user.tg, lv='c'):
-                            text = f'【订阅同步】\n#id{user.tg} 到期禁用 [{emby_info.name}](tg://user?id={user.tg})\n将为您封存至 {dead_day.strftime("%Y-%m-%d")}，请及时续期'
+                            # 对于永久订阅用户，发送特殊提示
+                            if expired_at == 0 or expired_at is None:
+                                text = f'【订阅同步】\n#id{user.tg} 永久订阅禁用 [{emby_info.name}](tg://user?id={user.tg})\n您的套餐为"不限时套餐"不可使用emby'
+                            else:
+                                text = f'【订阅同步】\n#id{user.tg} 到期禁用 [{emby_info.name}](tg://user?id={user.tg})\n将为您封存至 {dead_day.strftime("%Y-%m-%d")}，请及时续期'
                             LOGGER.info(text)
                             try:
                                 send = await bot.send_message(user.tg, text)
