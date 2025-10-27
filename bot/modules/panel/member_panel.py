@@ -832,10 +832,9 @@ async def bind_subscription(_, call):
          # 处理订阅时间
         days = 1
         if expired_at == 0 or expired_at is None:
-            days = 3650
-            emby_ex = int((datetime.now() + timedelta(days=days)).timestamp())
-            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
-            message = '✅ 订阅绑定成功, 你的订阅为永久订阅'
+            # 永久订阅不可开通emby
+            message = '❌ 您的套餐为"不限时套餐" 不可开通emby'
+            return await sendMessage(msg, message, buttons=back_members_ikb)
         elif expired_at <= datetime.now().timestamp():
             expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
             message = '❌ 订阅已过期，请重新输入'
@@ -918,12 +917,20 @@ async def change_sub(_, call):
         return
     elif msg.text == '/cancel':
         return await asyncio.gather(msg.delete(), p_start(_, msg))
+
+    tgid = call.from_user.id
     try:
         subscribe_url = msg.text.strip()
         # 验证订阅链接
         valid, token, expire, error_msg = await verify_sub_content(subscribe_url, config.proxy_sub_config.model_dump())
         if not valid:
             return await sendMessage(msg, '❌ 无效的订阅链接，请重新输入', buttons=re_bind_sub_ikb)
+
+        # 检查token是否已被其他用户绑定
+        existing_user = sql_get_proxy_user_by_token(token)
+        if existing_user and existing_user.tg != tgid:
+            return await sendMessage(msg, '❌ 该订阅已绑定其他账号，请重新输入', buttons=re_bind_sub_ikb)
+
     except Exception as e:
         LOGGER.error(f"【更改订阅】发生错误: {str(e)}")
         return await sendMessage(msg, '❌ 更改失败，请稍后重试。', buttons=back_members_ikb)
@@ -942,9 +949,9 @@ async def change_sub(_, call):
         emby_ex = expired_at
          # 处理订阅时间
         if expired_at == 0 or expired_at is None:
-            emby_ex = int((datetime.now() + timedelta(days=3650)).timestamp())
-            expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
-            message = '✅ 订阅更改绑定成功, 你的订阅为永久订阅'
+            # 永久订阅不可开通emby
+            message = '❌ 您的套餐为"不限时套餐" 不可开通emby'
+            return await sendMessage(msg, message, buttons=back_members_ikb)
         elif expired_at <= datetime.now().timestamp():
             expired_at_str = datetime.fromtimestamp(emby_ex).strftime('%Y-%m-%d %H:%M:%S')
             message = '❌ 订阅已过期，请重新输入'
