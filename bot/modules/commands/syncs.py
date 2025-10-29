@@ -14,6 +14,7 @@ import time
 from datetime import datetime, timedelta
 from asyncio import sleep
 from pyrogram import filters
+from sqlalchemy import and_
 from pyrogram.errors import FloodWait
 from bot import bot, prefixes, bot_photo, LOGGER, owner, group
 from bot.func_helper.emby import emby
@@ -234,7 +235,7 @@ async def restore_from_db(_, msg):
     if confirm_restore == 'true':
         LOGGER.info(
             f"{msg.from_user.first_name} - {msg.from_user.id} 执行了从数据库中恢复用户到Emby中的操作")
-        embyusers = get_all_emby(Emby.embyid != None and Emby.embyid != '')
+        embyusers = get_all_emby(and_(Emby.embyid.isnot(None), Emby.embyid != ''))
         # 获取当前执行命令的群组成员
         chat_members = [member.user.id async for member in bot.get_chat_members(chat_id=msg.chat.id)]
         await sendMessage(msg, '** 恢复中, 请耐心等待... **')
@@ -275,7 +276,7 @@ async def scan_embyname(_, msg):
         f"【扫描重复用户名任务开启】 - {msg.from_user.first_name} - {msg.from_user.id}")
 
     # 获取所有有效的emby用户
-    emby_users = get_all_emby(Emby.name != None)
+    emby_users = get_all_emby(Emby.name.isnot(None))
     if not emby_users:
         return await send.edit("⚡扫描重复用户名任务\n\n结束！数据库中没有用户。")
 
