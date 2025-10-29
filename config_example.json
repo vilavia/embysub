@@ -97,7 +97,7 @@
   },
   "auto_update": {
     "status": true,
-    "git_repo": "cysnn/embysub",
+    "git_repo": "vilavia/embysub",
     "commit_sha": null
   },
   "api": {
